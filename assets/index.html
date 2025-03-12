@@ -5,11 +5,13 @@
   <script type="importmap">
     {
       "imports": {
-        "ol/": "https://esm.sh/ol@10.4.0/"
+        "d3": "https://esm.sh/d3@7.8.5",
+        "d3-force": "https://esm.sh/d3-force@3.0.0"
       }
     }
     </script>
-  <script type="module">
+
+  <pre style="display: none;">
     import Map from 'ol/Map'
     import TileLayer from 'ol/layer/Tile'
     import VectorLayer from 'ol/layer/Vector'
@@ -79,7 +81,7 @@
         duration: 1000,
         center: fromLonLat([-96, 38.7946]),
         zoom: 5,
-      },{
+      }, {
         center: fromLonLat([lon, lat]),
         duration: 1000,
         easing: random(easing),
@@ -87,7 +89,7 @@
         zoom: 12,
       })
     })
-  </script>
+  </pre>
   <style>
     @import 'https://esm.sh/ol@10.4.0/ol.css';
 
@@ -109,7 +111,33 @@
 </head>
 
 <body>
-  <div id="map"></div>
+  <svg id="graph"></svg>
 </body>
+<script id="d3-graph-of-events" type="module">
+  import { select } from 'd3'
+  import { forceSimulation, forceLink, forceCenter, forceManyBody } from 'd3-force'
+  const svg = select('#graph')
+  const width = svg.attr('width')
+  const height = svg.attr('height')
+  const nodes = []
+  const simulation = forceSimulation()
+    .force('link', forceLink().id(d => d.id))
+    .force('charge', forceManyBody().strength(-10))
+    .force('center', forceCenter(width / 2, height / 2))
+
+  simulation.nodes(nodes)
+
+  const websocket = new WebSocket('/websocket')
+  websocket.addEventListener('message', (event) => {
+    const { metadata, data } = JSON.parse(event.data)
+    const {
+      coords: { lon, lat },
+    } = data
+
+    const node = { id: metadata.topic, x: lon, y: lat }
+    nodes.push(node)
+    simulation.nodes(nodes)
+  })
+</script>
 
 </html>

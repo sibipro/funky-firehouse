@@ -4,7 +4,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "firehouse-frenzy",
+  "name": "funky-firehouse",
   "main": "src/index.ts",
   "compatibility_date": "2025-03-03",
   "assets": {
@@ -13,16 +13,10 @@
   },
   "migrations": [
     {
-      "new_classes": ["MyDurableObject"],
+      "new_classes": [
+        "WebSocketServer"
+      ],
       "tag": "v1",
-    },
-    {
-      "new_classes": ["WebSocketServer"],
-      "tag": "v2",
-    },
-    {
-      "tag": "v3",
-      "deleted_classes": ["MyDurableObject"],
     },
   ],
   "durable_objects": {
