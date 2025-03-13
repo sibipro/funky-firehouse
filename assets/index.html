@@ -81,9 +81,6 @@
     links.value = [...links.value, { source: node.id, target: targetNode.id }]
   }
 
-  // Add a node every 500ms
-  setInterval(addRandomNode, 500)
-
   // Setup WebSocket
   const websocket = new WebSocket('/websocket')
   websocket.addEventListener('message', (event) => {
