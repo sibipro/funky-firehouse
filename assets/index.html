@@ -86,7 +86,6 @@
   const url = new URL(window.location.href)
   const username = url.searchParams.get('username')
   const password = url.searchParams.get('password')
-
   const websocket = new WebSocket(`/websocket?username=${username}&password=${password}`)
   websocket.addEventListener('message', (event) => {
     console.log(event)
