@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
+    "dev": "wrangler dev --live-reload",
+    "start": "wrangler dev --live-reload",
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250303.0",
     "typescript": "^5.5.2",
-    "wrangler": "^3.112.0"
+    "wrangler": "^4.0.0"
   }
 }

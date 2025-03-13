@@ -3,10 +3,20 @@ import { checkAuth } from './auth'
 export interface Env {
   WEBSOCKET_SERVER: DurableObjectNamespace
   ASSETS: any
+  QUEUE: Queue<any>
 }
 
-const firehoseToWebsocket = async (request: Request, stub: DurableObjectStub) => {
+const emit = async (request: Request, env: Env, stub: DurableObjectStub) => {
   const body = await request.json()
+  await Promise.all([emitToQueue(body, env), emitToWebSocket(body, stub)])
+  return new Response(null, { status: 204 })
+}
+
+const emitToQueue = async (body: any, env: Env) => {
+  env.QUEUE.send(body)
+}
+
+const emitToWebSocket = async (body: any, stub: DurableObjectStub) => {
   return stub.fetch('https://internal/broadcast', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -23,7 +33,7 @@ export default {
     // if we have an upgrade header, assume we're trying to connect to the websocket
     if (request.headers.get('Upgrade') === 'websocket') return stub.fetch(request)
 
-    if (request.method === 'POST') return firehoseToWebsocket(request, stub)
+    if (request.method === 'POST') return emit(request, env, stub)
 
     return env.ASSETS.fetch(request)
   },
@@ -69,7 +79,7 @@ export class WebSocketServer implements DurableObject {
   }
 
   broadcast(message: any): Response {
-    this.sessions.forEach((webSocket) => {
+    this.sessions.forEach((webSocket, index) => {
       try {
         webSocket.send(JSON.stringify(message))
       } catch (err) {

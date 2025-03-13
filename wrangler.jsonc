@@ -16,19 +16,27 @@
       "new_classes": [
         "WebSocketServer"
       ],
-      "tag": "v1",
-    },
+      "tag": "v1"
+    }
   ],
   "durable_objects": {
     "bindings": [
       {
         "class_name": "WebSocketServer",
-        "name": "WEBSOCKET_SERVER",
-      },
-    ],
+        "name": "WEBSOCKET_SERVER"
+      }
+    ]
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "QUEUE",
+        "queue": "firehose-receiver"
+      }
+    ]
   },
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
   /**
    * Smart Placement
