@@ -6,10 +6,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "funky-firehouse",
   "main": "src/index.ts",
-  "compatibility_date": "2025-03-03",
+  "compatibility_date": "2025-02-14",
   "assets": {
     "directory": "./assets",
-    "binding": "ASSETS",
+    "binding": "ASSETS"
   },
   "migrations": [
     {
