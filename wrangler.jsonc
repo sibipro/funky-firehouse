@@ -3,15 +3,16 @@
   "name": "funky-firehouse",
   "main": "src/index.ts",
   "compatibility_date": "2025-02-14",
-  // Top-level vars are used by default (wrangler dev / wrangler publish without --env)
-  "vars": {
-    "DEMO_USERNAME": "funky",
-    "DEMO_PASSWORD": "firehouse"
-  },
   // Production environment that has no vars,
   // so it only uses secrets
   "env": {
-    "production": {}
+    "production": {},
+    "development": {
+      "vars": {
+        "DEMO_USERNAME": "funky",
+        "DEMO_PASSWORD": "firehouse"
+      }
+    }
   },
   // Other config (assets, DO bindings, etc)...
   "assets": {
