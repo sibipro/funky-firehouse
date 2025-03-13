@@ -1,10 +1,16 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { DurableObject, DurableObjectNamespace, DurableObjectState } from '@cloudflare/workers-types'
-
 export interface Env {
   WEBSOCKET_SERVER: DurableObjectNamespace
   ASSETS: any
+}
+
+const firehoseToWebsocket = async (request: Request, stub: DurableObjectStub) => {
+  const body = await request.json()
+  return stub.fetch('https://internal/broadcast', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
 // Worker
@@ -15,17 +21,7 @@ export default {
     // if we have an upgrade header, assume we're trying to connect to the websocket
     if (request.headers.get('Upgrade') === 'websocket') return stub.fetch(request)
 
-    if (request.method === 'POST') {
-      // const body = await request.json()
-
-      await stub.fetch('https://internal/broadcast', {
-        method: 'POST',
-        body: JSON.stringify({ message: 'did you get this?' }),
-        headers: { topic: request.headers.get('topic') ?? 'unknown-topic' },
-      })
-
-      return new Response(null, { status: 204 })
-    }
+    if (request.method === 'POST') return firehoseToWebsocket(request, stub)
 
     return env.ASSETS.fetch(request)
   },
