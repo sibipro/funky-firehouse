@@ -32,7 +32,7 @@ export class WebSocketServer implements DurableObject {
   private sessions = new Set<WebSocket>()
 
   constructor(private state: DurableObjectState) {
-    this.state.getWebSockets().forEach((ws) => this.sessions.add(ws))
+    this.state.getWebSockets().forEach(this.sessions.add)
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -45,7 +45,10 @@ export class WebSocketServer implements DurableObject {
         },
       })
     }
+    return this.connect()
+  }
 
+  connect() {
     // WebSocket connection handling
     const [client, server] = Object.values(new WebSocketPair())
 
