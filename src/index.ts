@@ -17,7 +17,7 @@ const firehoseToWebsocket = async (request: Request, stub: DurableObjectStub) =>
 export default {
   async fetch(request: Request, env: Env) {
     if (!checkAuth(request, env)) return new Response('Unauthorized', { status: 401 })
-    console.log('request', request)
+
     const id = env.WEBSOCKET_SERVER.idFromName('funky-firehose')
     const stub = env.WEBSOCKET_SERVER.get(id)
     // if we have an upgrade header, assume we're trying to connect to the websocket

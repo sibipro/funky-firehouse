@@ -11,19 +11,7 @@
   // Production environment that has no vars,
   // so it only uses secrets
   "env": {
-    "production": {
-      "env": {},
-      "bindings": [
-        {
-          "name": "DEMO_USERNAME",
-          "type": "secret"
-        },
-        {
-          "name": "DEMO_PASSWORD",
-          "type": "secret"
-        }
-      ]
-    }
+    "production": {}
   },
   // Other config (assets, DO bindings, etc)...
   "assets": {
