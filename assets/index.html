@@ -8,139 +8,126 @@
       height: 100vh;
       background-color: #ccc;
     }
+
+    circle {
+      fill: #69b3a2;
+    }
+
+    line {
+      stroke: #999;
+      stroke-width: 1;
+    }
   </style>
   <script type="importmap">
     {
       "imports": {
-        "d3": "https://esm.sh/d3@7.8.5",
-        "d3-force": "https://esm.sh/d3-force@3.0.0"
+        "preact": "https://esm.sh/preact@10.26.4",
+        "@preact/signals": "https://esm.sh/@preact/signals@2.0.1",
+        "d3-force": "https://esm.sh/d3-force@3.0.0",
+        "htm": "https://esm.sh/htm@3.1.1"
       }
     }
-    </script>
-  <style>
-  </style>
+  </script>
 </head>
 
 <body>
-  <svg id="graph">
-    <g id="nodes"></g>
-    <g id="links"></g>
-  </svg>
+  <div id="app"></div>
 </body>
-<script id="d3-graph-of-events" type="module">
-  import { forceSimulation, forceLink, forceCenter, forceManyBody } from 'd3-force'
-  const svg = document.getElementById('graph')
-  // get svg element's width and height
-  const width = svg.clientWidth
-  const height = svg.clientHeight
-  const nodes = []
-  const links = []
-  console.log({ width, height })
+<script type="module">
+  import { render, h } from 'preact';
+  import { signal, effect } from '@preact/signals';
+  import { forceSimulation, forceLink, forceCenter, forceManyBody } from 'd3-force';
+  import htm from 'htm';
+
+  // Initialize htm with Preact's h
+  const html = htm.bind(h);
+
+  // Get dimensions
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  // Create signals for nodes and links
+  const nodes = signal([]);
+  const links = signal([]);
+
+  // Create simulation
   const simulation = forceSimulation()
     .force('link', forceLink().id(d => d.id))
     .force('charge', forceManyBody().strength(-30))
     .force('center', forceCenter(width / 2, height / 2))
-    .on("tick", ticked)
+    .on('tick', () => {
+      // Just trigger a signal update without creating new arrays
+      nodes.value = nodes.value;
+    });
 
-  // Function to handle simulation ticks
-  function ticked() {
-    // Move existing SVG elements to new positions
-    for (const n of nodes) {
-      createOrUpdateNode(n.id)
+  // Setup effect to update simulation when nodes or links change
+  effect(() => {
+    if (nodes.value.length > 0) {
+      simulation.nodes(nodes.value);
+      simulation.force('link').links(links.value);
+      simulation.alpha(0.3).restart();
     }
-    for (const l of links) {
-      createOrUpdateLink(l.source, l.target)
-    }
-  }
+  });
 
-  const createNode = (id) => {
-    const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-    node.id = id
-    document.getElementById('nodes').appendChild(node)
-    node.setAttribute('r', 5)
-    return node
-  }
-  const createOrUpdateNode = (nodeData) => {
-    const node = document.getElementById(nodeData.id) ?? createNode(nodeData.id)
-    node.setAttribute('cx', nodeData.x)
-    node.setAttribute('cy', nodeData.y)
+  // Function to add a random node
+  function addRandomNode() {
+    const node = {
+      id: Math.random().toString(),
+      x: Math.random() * width,
+      y: Math.random() * height
+    };
 
-
-    node.setAttribute('r', 5)
-    node.setAttribute('fill', '#69b3a2')
-    return node
-  }
-
-  /**
- * @param {SVGCircleElement} source
- * @param {SVGCircleElement} target
- */
-  const createLink = (source, target) => {
-    const link = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-    link.id = `${source.id}-${target.id}`
-    document.getElementById('links').appendChild(link)
-    link.setAttribute('stroke', '#999')
-    link.setAttribute('stroke-width', '1')
-    return link
-  }
-
-  /**
-   * @param {SVGCircleElement} source
-   * @param {SVGCircleElement} target
-   */
-  const createOrUpdateLink = (source, target) => {
-    const link = document.getElementById(`${source.id}-${target.id}`) ?? createLink(source, target)
-    link.setAttribute('x1', source.cx)
-    link.setAttribute('y1', source.cy)
-    link.setAttribute('x2', target.cx)
-    link.setAttribute('y2', target.cy)
-  }
-
-  // Function to update the graph
-  function updateGraph() {
-    // Create or update nodes and links
-    for (const link of links) {
-      const sourceNode = createOrUpdateNode(link.source)
-      const targetNode = createOrUpdateNode(link.target)
-      createOrUpdateLink(sourceNode, targetNode)
-    }
-
-    // Update simulation with current nodes and links
-    simulation.nodes(nodes)
-    simulation.force('link').links(links)
-    simulation.alpha(1).restart()
-  }
-
-  const addRandomNode = () => {
-    const node = { id: Math.random(), x: Math.random() * width, y: Math.random() * height }
-    nodes.push(node)
+    // Add node to signal
+    nodes.value = [...nodes.value, node];
 
     // If there are other nodes, create a link to a random one
-    if (nodes.length > 1) {
-      const targetNode = nodes[Math.floor(Math.random() * (nodes.length - 1))]
-      links.push({ source: node.id, target: targetNode.id })
+    if (nodes.value.length > 1) {
+      const targetNode = nodes.value[Math.floor(Math.random() * (nodes.value.length - 1))];
+      links.value = [...links.value, { source: node.id, target: targetNode.id }];
     }
-    console.log({ nodes, links })
-
-    updateGraph()
   }
-  setInterval(addRandomNode, 500)
 
-  const websocket = new WebSocket('/websocket')
+  // Add a node every 500ms
+  setInterval(addRandomNode, 500);
+
+  // Setup WebSocket
+  const websocket = new WebSocket('/websocket');
   websocket.addEventListener('message', (event) => {
-    console.log(event)
+    console.log(event);
+    addRandomNode();
+  });
 
-    const node = { id: Math.random(), x: Math.random() * width, y: Math.random() * height }
-    nodes.push(node)
+  // ForceGraph component - pure render function
+  function ForceGraph() {
+    return html`
+      <svg id="graph">
+        <g id="links">
+          ${links.value.map(link => html`
+            <line
+              key=${`${link.source.id || link.source}-${link.target.id || link.target}`}
+              x1=${link.source.x || 0}
+              y1=${link.source.y || 0}
+              x2=${link.target.x || 0}
+              y2=${link.target.y || 0}
+            />
+          `)}
+        </g>
+        <g id="nodes">
+          ${nodes.value.map(node => html`
+            <circle
+              key=${node.id}
+              cx=${node.x || 0}
+              cy=${node.y || 0}
+              r=${5}
+            />
+          `)}
+        </g>
+      </svg>
+    `;
+  }
 
-    // If there are other nodes, create a link to a random one
-    if (nodes.length > 1) {
-      const targetNode = nodes[Math.floor(Math.random() * (nodes.length - 1))]
-      links.push({ source: node.id, target: targetNode.id })
-    }
-
-    updateGraph()
-  })
+  // Render the app
+  render(html`<${ForceGraph} />`, document.getElementById('app'));
 </script>
 
 </html>
