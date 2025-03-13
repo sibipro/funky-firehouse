@@ -11,7 +11,19 @@
   // Production environment that has no vars,
   // so it only uses secrets
   "env": {
-    "production": {}
+    "production": {
+      "env": {},
+      "bindings": [
+        {
+          "name": "DEMO_USERNAME",
+          "type": "secret"
+        },
+        {
+          "name": "DEMO_PASSWORD",
+          "type": "secret"
+        }
+      ]
+    }
   },
   // Other config (assets, DO bindings, etc)...
   "assets": {
@@ -33,15 +45,5 @@
         "name": "WEBSOCKET_SERVER"
       }
     ]
-  },
-  "bindings": [
-    {
-      "name": "DEMO_USERNAME",
-      "type": "secret"
-    },
-    {
-      "name": "DEMO_PASSWORD",
-      "type": "secret"
-    }
-  ]
+  }
 }
