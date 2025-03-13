@@ -1,5 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
-
+import { checkAuth } from './auth'
 export interface Env {
   WEBSOCKET_SERVER: DurableObjectNamespace
   ASSETS: any
@@ -16,6 +16,8 @@ const firehoseToWebsocket = async (request: Request, stub: DurableObjectStub) =>
 // Worker
 export default {
   async fetch(request: Request, env: Env) {
+    if (!checkAuth(request, env)) return new Response('Unauthorized', { status: 401 })
+
     const id = env.WEBSOCKET_SERVER.idFromName('funky-firehose')
     const stub = env.WEBSOCKET_SERVER.get(id)
     // if we have an upgrade header, assume we're trying to connect to the websocket

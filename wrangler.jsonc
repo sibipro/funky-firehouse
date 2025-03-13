@@ -26,5 +26,9 @@
         "name": "WEBSOCKET_SERVER",
       },
     ],
+  },
+  "vars": {
+    "DEMO_USERNAME": "funky",
+    "DEMO_PASSWORD": "firehouse"
   }
 }
