@@ -44,19 +44,30 @@
 
   // Function to handle simulation ticks
   function ticked() {
-    updateGraph()
+    // Move existing SVG elements to new positions
+    for (const n of nodes) {
+      createOrUpdateNode(n.id)
+    }
+    for (const l of links) {
+      createOrUpdateLink(l.source, l.target)
+    }
   }
 
   const createNode = (id) => {
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
     node.id = id
     document.getElementById('nodes').appendChild(node)
+    node.setAttribute('r', 5)
     return node
   }
-  const createOrUpdateNode = (id) => {
-    const node = document.getElementById(id) ?? createNode(id)
-    node.setAttribute('cx', width / 200)
-    node.setAttribute('cy', height / 200)
+  const createOrUpdateNode = (nodeData) => {
+    const node = document.getElementById(nodeData.id) ?? createNode(nodeData.id)
+    node.setAttribute('cx', nodeData.x)
+    node.setAttribute('cy', nodeData.y)
+
+
+    node.setAttribute('r', 5)
+    node.setAttribute('fill', '#69b3a2')
     return node
   }
 
@@ -68,6 +79,8 @@
     const link = document.createElementNS('http://www.w3.org/2000/svg', 'line')
     link.id = `${source.id}-${target.id}`
     document.getElementById('links').appendChild(link)
+    link.setAttribute('stroke', '#999')
+    link.setAttribute('stroke-width', '1')
     return link
   }
 
@@ -77,20 +90,25 @@
    */
   const createOrUpdateLink = (source, target) => {
     const link = document.getElementById(`${source.id}-${target.id}`) ?? createLink(source, target)
-    link.setAttribute('x1', source.cx.baseVal.value)
-    link.setAttribute('y1', source.cy.baseVal.value)
-    link.setAttribute('x2', target.cx.baseVal.value)
-    link.setAttribute('y2', target.cy.baseVal.value)
+    link.setAttribute('x1', source.cx)
+    link.setAttribute('y1', source.cy)
+    link.setAttribute('x2', target.cx)
+    link.setAttribute('y2', target.cy)
   }
 
   // Function to update the graph
   function updateGraph() {
-    // find node by document.getElementById. If it doesn't exist, create it
+    // Create or update nodes and links
     for (const link of links) {
       const sourceNode = createOrUpdateNode(link.source)
       const targetNode = createOrUpdateNode(link.target)
       createOrUpdateLink(sourceNode, targetNode)
     }
+
+    // Update simulation with current nodes and links
+    simulation.nodes(nodes)
+    simulation.force('link').links(links)
+    simulation.alpha(1).restart()
   }
 
   const addRandomNode = () => {
