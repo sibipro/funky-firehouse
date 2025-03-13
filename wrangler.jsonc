@@ -1,12 +1,19 @@
-/**
- * For more details on how to configure Wrangler, refer to:
- * https://developers.cloudflare.com/workers/wrangler/configuration/
- */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "funky-firehouse",
   "main": "src/index.ts",
   "compatibility_date": "2025-02-14",
+  // Top-level vars are used by default (wrangler dev / wrangler publish without --env)
+  "vars": {
+    "DEMO_USERNAME": "funky",
+    "DEMO_PASSWORD": "firehouse"
+  },
+  // Production environment that has no vars,
+  // so it only uses secrets
+  "env": {
+    "production": {}
+  },
+  // Other config (assets, DO bindings, etc)...
   "assets": {
     "directory": "./assets",
     "binding": "ASSETS"
@@ -16,19 +23,25 @@
       "new_classes": [
         "WebSocketServer"
       ],
-      "tag": "v1",
-    },
+      "tag": "v1"
+    }
   ],
   "durable_objects": {
     "bindings": [
       {
         "class_name": "WebSocketServer",
-        "name": "WEBSOCKET_SERVER",
-      },
-    ],
+        "name": "WEBSOCKET_SERVER"
+      }
+    ]
   },
-  "vars": {
-    "DEMO_USERNAME": "funky",
-    "DEMO_PASSWORD": "firehouse"
-  }
+  "bindings": [
+    {
+      "name": "DEMO_USERNAME",
+      "type": "secret"
+    },
+    {
+      "name": "DEMO_PASSWORD",
+      "type": "secret"
+    }
+  ]
 }

@@ -14,7 +14,6 @@ const checkBasicAuth = (request: Request, env) => {
 
 const checkQueryParams = (request: Request, env) => {
   const url = new URL(request.url)
-  console.log(url)
   const username = url.searchParams.get('username')
   const password = url.searchParams.get('password')
   return username === env.DEMO_USERNAME && password === env.DEMO_PASSWORD
