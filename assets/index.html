@@ -1,7 +1,14 @@
 <html>
 
 <head>
-  <title>Firehouse Frenzy</title>
+  <title>Funky Firehouse</title>
+  <style>
+    svg {
+      width: 100vw;
+      height: 100vh;
+      background-color: #ccc;
+    }
+  </style>
   <script type="importmap">
     {
       "imports": {
@@ -10,133 +17,111 @@
       }
     }
     </script>
-
-  <pre style="display: none;">
-    import Map from 'ol/Map'
-    import TileLayer from 'ol/layer/Tile'
-    import VectorLayer from 'ol/layer/Vector'
-    import VectorSource from 'ol/source/Vector'
-    import OSM from 'ol/source/OSM'
-    import View from 'ol/View'
-    import Feature from 'ol/Feature'
-    import Point from 'ol/geom/Point'
-    import { fromLonLat } from 'ol/proj'
-    import * as easing from 'ol/easing'
-    import { Style, Fill, Stroke, Text, Circle } from 'ol/style'
-    const source = new VectorSource()
-    const view = new View({
-      center: fromLonLat([-96, 38.7946]),
-      zoom: 5,
-    })
-
-    const map = new Map({
-      target: 'map',
-      layers: [
-        new TileLayer({
-          source: new OSM(),
-        }),
-        new VectorLayer({
-          source,
-        }),
-      ],
-      view,
-    })
-
-
-    const websocket = new WebSocket('/websocket')
-    const random = (arr) => arr[Math.floor(Math.random() * arr.length)]
-    websocket.addEventListener('message', (event) => {
-      const { metadata, data } = JSON.parse(event.data)
-      const {
-        coords: { lon, lat },
-      } = data
-
-      const feature = new Feature({
-        type: 'geoMarker',
-        geometry: new Point(fromLonLat([lon, lat])),
-      })
-
-      feature.setStyle(new Style({
-        image: new Circle({
-          radius: 7,
-          fill: new Fill({
-            color: 'purple',
-          }),
-          stroke: new Stroke({
-            color: 'white',
-            width: 2,
-          }),
-
-        }),
-        text: new Text({
-          text: metadata.topic,
-          font: 'bold 16px Calibri,sans-serif',
-          offsetY: -20,
-        })
-      }))
-      source.addFeature(feature)
-
-      // animate the center to the new location
-      view.animate({
-        duration: 1000,
-        center: fromLonLat([-96, 38.7946]),
-        zoom: 5,
-      }, {
-        center: fromLonLat([lon, lat]),
-        duration: 1000,
-        easing: random(easing),
-        rotation: 0,
-        zoom: 12,
-      })
-    })
-  </pre>
   <style>
-    @import 'https://esm.sh/ol@10.4.0/ol.css';
-
-    html,
-    body,
-    #map {
-      width: 100vw;
-      height: 100vh;
-      padding: 0;
-      margin: 0;
-    }
-
-    #map {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-    }
   </style>
 </head>
 
 <body>
-  <svg id="graph"></svg>
+  <svg id="graph">
+    <g id="nodes"></g>
+    <g id="links"></g>
+  </svg>
 </body>
 <script id="d3-graph-of-events" type="module">
-  import { select } from 'd3'
   import { forceSimulation, forceLink, forceCenter, forceManyBody } from 'd3-force'
-  const svg = select('#graph')
-  const width = svg.attr('width')
-  const height = svg.attr('height')
+  const svg = document.getElementById('graph')
+  // get svg element's width and height
+  const width = svg.clientWidth
+  const height = svg.clientHeight
   const nodes = []
+  const links = []
+  console.log({ width, height })
   const simulation = forceSimulation()
     .force('link', forceLink().id(d => d.id))
-    .force('charge', forceManyBody().strength(-10))
+    .force('charge', forceManyBody().strength(-30))
     .force('center', forceCenter(width / 2, height / 2))
+    .on("tick", ticked)
 
-  simulation.nodes(nodes)
+  // Function to handle simulation ticks
+  function ticked() {
+    updateGraph()
+  }
+
+  const createNode = (id) => {
+    const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    node.id = id
+    document.getElementById('nodes').appendChild(node)
+    return node
+  }
+  const createOrUpdateNode = (id) => {
+    const node = document.getElementById(id) ?? createNode(id)
+    node.setAttribute('cx', width / 200)
+    node.setAttribute('cy', height / 200)
+    return node
+  }
+
+  /**
+ * @param {SVGCircleElement} source
+ * @param {SVGCircleElement} target
+ */
+  const createLink = (source, target) => {
+    const link = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+    link.id = `${source.id}-${target.id}`
+    document.getElementById('links').appendChild(link)
+    return link
+  }
+
+  /**
+   * @param {SVGCircleElement} source
+   * @param {SVGCircleElement} target
+   */
+  const createOrUpdateLink = (source, target) => {
+    const link = document.getElementById(`${source.id}-${target.id}`) ?? createLink(source, target)
+    link.setAttribute('x1', source.cx.baseVal.value)
+    link.setAttribute('y1', source.cy.baseVal.value)
+    link.setAttribute('x2', target.cx.baseVal.value)
+    link.setAttribute('y2', target.cy.baseVal.value)
+  }
+
+  // Function to update the graph
+  function updateGraph() {
+    // find node by document.getElementById. If it doesn't exist, create it
+    for (const link of links) {
+      const sourceNode = createOrUpdateNode(link.source)
+      const targetNode = createOrUpdateNode(link.target)
+      createOrUpdateLink(sourceNode, targetNode)
+    }
+  }
+
+  const addRandomNode = () => {
+    const node = { id: Math.random(), x: Math.random() * width, y: Math.random() * height }
+    nodes.push(node)
+
+    // If there are other nodes, create a link to a random one
+    if (nodes.length > 1) {
+      const targetNode = nodes[Math.floor(Math.random() * (nodes.length - 1))]
+      links.push({ source: node.id, target: targetNode.id })
+    }
+    console.log({ nodes, links })
+
+    updateGraph()
+  }
+  setInterval(addRandomNode, 500)
 
   const websocket = new WebSocket('/websocket')
   websocket.addEventListener('message', (event) => {
-    const { metadata, data } = JSON.parse(event.data)
-    const {
-      coords: { lon, lat },
-    } = data
+    console.log(event)
 
-    const node = { id: metadata.topic, x: lon, y: lat }
+    const node = { id: Math.random(), x: Math.random() * width, y: Math.random() * height }
     nodes.push(node)
-    simulation.nodes(nodes)
+
+    // If there are other nodes, create a link to a random one
+    if (nodes.length > 1) {
+      const targetNode = nodes[Math.floor(Math.random() * (nodes.length - 1))]
+      links.push({ source: node.id, target: targetNode.id })
+    }
+
+    updateGraph()
   })
 </script>
 
