@@ -19,113 +19,101 @@
     }
   </style>
   <script type="importmap">
-    {
-      "imports": {
-        "preact": "https://esm.sh/preact@10.26.4",
-        "@preact/signals": "https://esm.sh/@preact/signals@2.0.1",
-        "d3-force": "https://esm.sh/d3-force@3.0.0",
-        "htm": "https://esm.sh/htm@3.1.1"
+      {
+        "imports": {
+          "preact": "https://esm.sh/preact@10.26.4",
+          "@preact/signals": "https://esm.sh/@preact/signals@2.0.1",
+          "d3-force": "https://esm.sh/d3-force@3.0.0",
+          "htm": "https://esm.sh/htm@3.1.1"
+        }
       }
-    }
-  </script>
+    </script>
 </head>
 
 <body>
   <div id="app"></div>
 </body>
 <script type="module">
-  import { render, h } from 'preact';
-  import { signal, effect } from '@preact/signals';
-  import { forceSimulation, forceLink, forceCenter, forceManyBody } from 'd3-force';
-  import htm from 'htm';
+  import { render, h } from 'preact'
+  import { signal, effect, computed } from '@preact/signals'
+  import { forceSimulation, forceLink, forceCenter, forceManyBody } from 'd3-force'
+  import htm from 'htm'
 
   // Get dimensions
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  const width = window.innerWidth
+  const height = window.innerHeight
 
   // Create signals for nodes and links
-  const nodes = signal([]);
-  const links = signal([]);
-  const tickCount = signal(0);
+  const nodes = signal([])
+  const links = signal([])
+
   // Create simulation
   const simulation = forceSimulation()
-    .force('link', forceLink().id(d => d.id))
-    .force('charge', forceManyBody().strength(-100)) // Stronger repulsion for better movement
+    .force(
+      'link',
+      forceLink().id((d) => d.id)
+    )
     .force('center', forceCenter(width / 2, height / 2))
     .on('tick', () => {
-      // Increment tick counter to trigger reactivity
-      tickCount.value++;
-    });
+      nodes.value = [...simulation.nodes()]
+      links.value = [...simulation.force('link').links()]
+    })
 
   // Setup effect to update simulation when nodes or links change
   effect(() => {
-    if (tickCount.value > 0) {
-      simulation.nodes(nodes.value);
-      simulation.force('link').links(links.value);
-      simulation.alpha(0.3).restart();
-    }
-  });
+    simulation.nodes(nodes.value)
+    simulation.force('link').links(links.value)
+    simulation.alpha(0.3).restart()
+  })
 
   // Function to add a random node
   function addRandomNode() {
     const node = {
       id: Math.random().toString(),
       x: Math.random() * width,
-      y: Math.random() * height
-    };
-
-    // Add node to signal
-    nodes.value = [...nodes.value, node];
-
-    // If there are other nodes, create a link to a random one
-    if (nodes.value.length > 1) {
-      const targetNode = nodes.value[Math.floor(Math.random() * (nodes.value.length - 1))];
-      links.value = [...links.value, { source: node.id, target: targetNode.id }];
+      y: Math.random() * height,
     }
+
+    // Add node to signal - create a new array to ensure reactivity
+    nodes.value = [...nodes.value, node]
+    const targetNode = nodes.value[Math.floor(Math.random() * (nodes.value.length - 1))]
+    // Create a new array to ensure reactivity
+    links.value = [...links.value, { source: node.id, target: targetNode.id }]
   }
 
   // Add a node every 500ms
-  setInterval(addRandomNode, 500);
+  setInterval(addRandomNode, 500)
 
   // Setup WebSocket
-  const websocket = new WebSocket('/websocket');
+  const websocket = new WebSocket('/websocket')
   websocket.addEventListener('message', (event) => {
-    console.log(event);
-    addRandomNode();
-  });
+    console.log(event)
+    addRandomNode()
+  })
 
   // ForceGraph component - pure render function
   function ForceGraph() {
     return html`
-      <svg id="graph" tickCount=${tickCount.value}>
-        <g id="links">
-          ${links.value.map(link => html`
-            <line
-              key=${`${link.source.id || link.source}-${link.target.id || link.target}`}
-              x1=${link.source.x || 0}
-              y1=${link.source.y || 0}
-              x2=${link.target.x || 0}
-              y2=${link.target.y || 0}
-            />
-          `)}
-        </g>
-        <g id="nodes">
-          ${nodes.value.map(node => html`
-            <circle
-              key=${node.id}
-              cx=${node.x || 0}
-              cy=${node.y || 0}
-              r=${5}
-            />
-          `)}
-        </g>
-      </svg>
-    `;
+        <svg>
+          <g>${links.value.map(Link)}</g>
+          <g>${nodes.value.map(Node)}</g>
+        </svg>
+      `
+  }
+
+  function Link(link) {
+    return html`
+        <line key=${link.source + '-' + link.target} x1=${link.source.x} y1=${link.source.y} x2=${link.target.x} y2=${link.target.y} />
+      `
+  }
+
+  function Node(node) {
+    return html` <circle key=${node.id} cx=${node.x} cy=${node.y} r="5" /> `
   }
 
   // Render the app
-  const html = htm.bind(h);
-  render(html`<${ForceGraph} />`, document.getElementById('app'));
+  const html = htm.bind(h)
+  render(html`<${ForceGraph} />`, document.getElementById('app'))
 </script>
 
 </html>
