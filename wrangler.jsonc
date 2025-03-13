@@ -27,22 +27,6 @@
       },
     ],
   },
-  "env": {
-    "dev": {
-      "vars": {
-        "DEMO_USERNAME": "funky",
-        "DEMO_PASSWORD": "firehouse"
-      },
-      "durable_objects": {
-        "bindings": [
-          {
-            "class_name": "WebSocketServer",
-            "name": "WEBSOCKET_SERVER",
-          },
-        ],
-      },
-    }
-  },
   "observability": {
     "enabled": true,
   },
