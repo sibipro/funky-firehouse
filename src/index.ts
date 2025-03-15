@@ -7,30 +7,44 @@ export interface Env {
   PRE_SHARED_KEY: string
 }
 
-const decrypt = async (body: string, preSharedKey: string, iv: string) => {
-  const decoded = atob(body)
+const decodeBase64 = (b64: string) => new Uint8Array([...atob(b64)].map((c) => c.charCodeAt(0)))
 
-  // Import the preSharedKey directly as an AES-256-GCM key
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(preSharedKey), { name: 'AES-256-GCM' }, false, ['decrypt'])
+const decrypt = async (body: string, preSharedKey: string, iv: string, authTag: string) => {
+  const keyBinary = decodeBase64(preSharedKey)
+  const key = await crypto.subtle.importKey('raw', keyBinary, { name: 'AES-GCM' }, false, ['decrypt'])
 
-  if (!iv) throw new Error('Encryption IV is required')
-  const ivBinary = new TextEncoder().encode(iv)
+  const ivBinary = decodeBase64(iv)
+  const bodyBinary = decodeBase64(body)
+  const authTagBinary = decodeBase64(authTag)
 
-  const decrypted = await crypto.subtle.decrypt(
-    { name: 'aes-256-gcm', iv: ivBinary },
-    key,
-    new Uint8Array(decoded.split('').map((c) => c.charCodeAt(0)))
-  )
-  const message = new TextDecoder().decode(decrypted)
-  return JSON.parse(message)
+  if (ivBinary.length !== 12 || authTagBinary.length !== 16) {
+    console.error('Invalid IV or authTag length')
+    return null
+  }
+
+  try {
+    const fullCiphertext = new Uint8Array([...bodyBinary, ...authTagBinary])
+
+    const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBinary }, key, fullCiphertext)
+    const message = new TextDecoder().decode(decrypted)
+    return JSON.parse(message)
+  } catch (error) {
+    console.error('Error decrypting message', error)
+    return null
+  }
 }
 
 const emit = async (request: Request, env: Env, stub: DurableObjectStub) => {
   const body = await request.text()
   const iv = request.headers.get('encryption-iv')
-  if (!iv) return new Response('Missing encryption-iv header', { status: 403 })
-  const firehoseMessage = await decrypt(body, env.PRE_SHARED_KEY, iv)
-  await Promise.all([emitToQueue(firehoseMessage, env), emitToWebSocket(firehoseMessage, stub)])
+  const authTag = request.headers.get('encryption-auth-tag')
+
+  if (!iv || !authTag) return new Response('Missing encryption headers', { status: 403 })
+
+  const firehoseMessage = await decrypt(body, env.PRE_SHARED_KEY, iv, authTag)
+  if (!firehoseMessage) return new Response('Invalid encryption', { status: 403 })
+
+  await Promise.all([/*emitToQueue(firehoseMessage, env),*/ emitToWebSocket(firehoseMessage, stub)])
   return new Response(null, { status: 204 })
 }
 
