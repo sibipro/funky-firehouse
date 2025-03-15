@@ -4,19 +4,41 @@ export interface Env {
   WEBSOCKET_SERVER: DurableObjectNamespace
   ASSETS: any
   QUEUE: Queue<any>
+  PRE_SHARED_KEY: string
+}
+
+const decrypt = async (body: string, preSharedKey: string, iv: string) => {
+  const decoded = atob(body)
+
+  // Import the preSharedKey directly as an AES-256-GCM key
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(preSharedKey), { name: 'AES-256-GCM' }, false, ['decrypt'])
+
+  if (!iv) throw new Error('Encryption IV is required')
+  const ivBinary = new TextEncoder().encode(iv)
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'aes-256-gcm', iv: ivBinary },
+    key,
+    new Uint8Array(decoded.split('').map((c) => c.charCodeAt(0)))
+  )
+  const message = new TextDecoder().decode(decrypted)
+  return JSON.parse(message)
 }
 
 const emit = async (request: Request, env: Env, stub: DurableObjectStub) => {
-  const body = await request.json()
-  await Promise.all([emitToQueue(body, env), emitToWebSocket(body, stub)])
+  const body = await request.text()
+  const iv = request.headers.get('encryption-iv')
+  if (!iv) return new Response('Missing encryption-iv header', { status: 403 })
+  const firehoseMessage = await decrypt(body, env.PRE_SHARED_KEY, iv)
+  await Promise.all([emitToQueue(firehoseMessage, env), emitToWebSocket(firehoseMessage, stub)])
   return new Response(null, { status: 204 })
 }
 
-const emitToQueue = async (body: any, env: Env) => {
-  env.QUEUE.send(body)
+const emitToQueue = async (body: string, env: Env) => {
+  await env.QUEUE.send(body)
 }
 
-const emitToWebSocket = async (body: any, stub: DurableObjectStub) => {
+const emitToWebSocket = async (body: string, stub: DurableObjectStub) => {
   return stub.fetch('https://internal/broadcast', {
     method: 'POST',
     body: JSON.stringify(body),
